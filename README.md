@@ -1,16 +1,17 @@
 # Language Locale Overwrite for WordPress
 
-This lightweight SEO plugin for WordPress allows changing the default Language Locale and also on individual Posts and Pages.
+This lightweight SEO plugin for WordPress allows changing the default HTML lang attribute globally, and on individual Posts and Pages. Along with cross-referencing similiar Posts/Pages in different Languages using Alternate Hreflang tags.
 
 The Plugin is mostly of use when your WordPress blog contains a _mix of languages with individual Posts/Pages_, and you do not want to install a huge translation plugin (because your posts are not actually translations, but just each individually published in a different content language). Accordingly you may also _not_ want to change any of the URLs of your existing articles.
 
 
 ## 💡 What does this do?
 
-1. Allows changing the default Language Locale for your Blog,
-2. and overwriting the Language Locale on individual Posts and Pages (in addition to 1.)
+1. Allows changing the default **HTML lang attribute** for your Blog,
+2. overwriting the HTML lang attribute **on individual Posts and Pages** (in addition to 1.),
+3. and cross-referencing Posts/Pages in different languages using **Alternate Hreflang tags**.
 
-I developed this because my Blog is mostly written in English, but contains some articels written in German. And I wanted to improve their respective search engine optimization. In addition, with this plugin, I was able to change the default "English (United States)" (`en-US`) language code to just neutral "English" (`en`).
+I developed this because my Blog is mostly written in English, but contains some articels written in German - of which some have gotten a content recycle across the two languages. And I wanted to improve their respective search engine optimization. In addition, with this plugin, I was able to change the default "English (United States)" (`en-US`) language code to just neutral "English" (`en`).
 
 
 ## 🎓 How to use
@@ -20,42 +21,21 @@ I developed this because my Blog is mostly written in English, but contains some
 * Place the unzipped `language-locale-overwrite`-folder **into your WordPress Plugin directory**:<br>`[wordpress]/wp-content/plugins/`
 * Go to your WordPress Admin Dashboard » Plugins, and **activate «Language Locale Overwrite»**
 
-### 📝
-* Now open any Post or Page of which you want to modify its language locales for improved Search Engine content indexing
-* There's a new Section «Language Locale» where a valid ISO-Language/-Country code can be specified
+### 📝 Settings
+#### Global change of `<html lang="…">`
+1. Go to your WordPress "Settings » General" at /wp-admin/options-general.php#llo_global
+2. Set your desired ISO-Language/-Country locale using the setting «Change HTML lang attribute»
+3. (Optional) For OpenGraph `og:locale` you can set a preferred 2-char country code using «Custom Country code»
 
-### 👨‍💻 Display overwritten Language Locale in your Theme
+#### Individual HTML lang change for Posts/Pages
+1. Open any Post or Page, for which you want to modify its language locale
+2. There's a new section «Language Locale» where a valid ISO-Language/-Country code can be specified
 
-> I'm a bit too lazy right now, so this is filter is not part of the Plugin itself.
-> Maybe this will change in the future... let's see. (A Pull Request would also be welcome 😉)
+#### Link Posts/Pages with same content in different languages
+Pre-requisite: you must have Post/Pages already tagged with a "non-default" language locale!
 
-Add the following Code to your WordPress Child-Theme's `functions.php`-file, and **modify it** according to your needs:
-
-```php
-/**
- * Modify get_bloginfo( 'language' ) to use 2-char ISO-Code.
- * @link https://wordpress.stackexchange.com/a/210101/110615
- * @uses language_attributes()
- */
-add_filter( 'language_attributes', 'set_custom_language_attributes' );
-if ( ! function_exists( 'set_custom_language_attributes' ) ) {
-	function set_custom_language_attributes( $wp_default_locale )
-	{
-        /** Set this, if needed. Example: 'en' */
-        $use_different_global_locale = '';
-
-        $default_locale = ( empty($use_different_global_locale) ? $wp_default_locale : $use_different_global_locale);
-		if ( is_singular() && !empty( get_post_meta( get_the_ID(), 'language_locale_overwrite', true ) ) ) {
-			$custom_locale = esc_attr( get_post_meta( get_the_ID(), 'language_locale_overwrite', true ) );
-		}
-		$use_locale = ( isset($custom_locale) && !empty($custom_locale) ? $custom_locale : $default_locale );
-		$set_custom_language_attribute = 'lang="'.$use_locale.'"';
-
-		/** Return the modified `lang="..."` HTML attribute */
-		return $set_custom_language_attribute;
-	}
-}
-```
+1. Edit the Post or Page, for which you want to reference a translated Post/Page
+2. In the «Language Locale» section, use the «Link alternate lang…»-dropdowns to make cross-links
 
 
 ## ℹ️ List of valid language locales
@@ -70,3 +50,9 @@ Valid language locales either consist of 2-characters ISO-code for languages, or
 * `fr` → French
 * `zh-CN` → Chinese (Simplified)
 * …and so on
+
+---
+
+<p align="center"><a href="https://bmc.link/swissmacuser/">
+    <img src="https://cdn.buymeacoffee.com/buttons/default-yellow.png" alt="Support this project with a Coffee." height="40" width="172">
+</a></p>
