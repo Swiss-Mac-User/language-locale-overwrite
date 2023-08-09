@@ -239,9 +239,10 @@ function get_posts_with_language_locale_overwrite( $type, $locale ) {
  * This function retrieves all the language locales that have been set
  * as custom values for the 'language_locale_overwrite' meta key.
  *
+ * @param bool $no_duplicates If true, filters out any duplicates. Default: true
  * @return array An array of language locales.
  */
-function get_all_custom_language_locales(  ) {
+function get_all_custom_language_locales( $no_duplicates=true ) {
 
 	$query = new WP_Query([
 		 'meta_key' => 'language_locale_overwrite'
@@ -251,7 +252,8 @@ function get_all_custom_language_locales(  ) {
 	foreach( $query->posts as $post_id ) {
 		$defined_language_locales[] = get_post_meta( $post_id, 'language_locale_overwrite', true );
 	}
-	return $defined_language_locales;
+	$list_of_custom_locales = ( $no_duplicates ? array_unique($defined_language_locales) : $defined_language_locales);
+	return $list_of_custom_locales;
 
 }
 
