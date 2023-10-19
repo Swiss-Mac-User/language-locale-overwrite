@@ -1,6 +1,6 @@
 # Language Locale Overwrite for WordPress
 
-This lightweight SEO plugin for WordPress allows changing the default HTML lang attribute globally, and on individual Posts and Pages. Along with cross-referencing similiar Posts/Pages in different Languages using Alternate Hreflang tags.
+This lightweight SEO plugin for WordPress allows changing the default HTML lang attribute globally, and on individual Posts and Pages. Along with cross-referencing similar Posts/Pages in different Languages using Alternate Hreflang tags.
 
 The Plugin is mostly of use when your WordPress blog contains a _mix of languages with individual Posts/Pages_, and you do not want to install a huge translation plugin (because your posts are not actually translations, but just each individually published in a different content language). Accordingly you may also _not_ want to change any of the URLs of your existing articles.
 
