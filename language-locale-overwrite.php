@@ -3,7 +3,7 @@
  * Plugin Name:			Language Locale Overwrite
  * Plugin URI:			https://github.com/Swiss-Mac-User/language-locale-overwrite
  * Description:			This plugin allows overwriting the general Language Locale and on individual pages.
- * Version:				2.1.0
+ * Version:				2.2.0
  * Requires at least:	6.2
  * Requires PHP:		7.4
  * Author:				Swiss-Mac-User
@@ -128,9 +128,12 @@ function language_locale_overwrite_admin_content_ogt(){
 
 /**
  * Map custom Meta Box Section to functions for Posts and Pages
+ *
+ * @link https://wordpress.stackexchange.com/questions/106859/add-metabox-to-all-custom-post-types See Feature Request #3
+ * // TODO Add support for Custom Post Types: [#3](https://github.com/Swiss-Mac-User/language-locale-overwrite/issues/3)
  */
 function add_custom_meta_boxes() {
-	add_meta_box( 'language-locale-overwrite', __( 'Language Locale', 'language_locale_overwrite' ), 'show_language_locale_meta_box', ['post', 'page'] );
+	add_meta_box( 'language-locale-overwrite', __( 'Language Locale', 'language_locale_overwrite' ), 'show_language_locale_meta_box' );//, ['post', 'page'] );
 }
 
 /**
@@ -202,6 +205,8 @@ function show_language_locale_meta_box( $post ) {
 
 /**
  * Get posts with language locale overwrite meta_key value.
+ *
+ * // TODO Add support for Custom Post Types: [#3](https://github.com/Swiss-Mac-User/language-locale-overwrite/issues/3)
  *
  * @link https://developer.wordpress.org/reference/functions/get_posts/
  * @link https://developer.wordpress.org/reference/functions/get_pages/
@@ -303,6 +308,8 @@ function get_global_custom_language_locale( ) {
  *
  * @link https://metabox.io/how-to-create-custom-meta-boxes-custom-fields-in-wordpress/
  *
+ * @since 2.2.0 Fixes PHP 8.1 log errors as in [#4](https://github.com/Swiss-Mac-User/language-locale-overwrite/issues/4)
+ *
  * @param int $post_id The ID of the post being saved.
  */
 function save_language_locale_overwrite( $post_id ) {
@@ -314,29 +321,31 @@ function save_language_locale_overwrite( $post_id ) {
 	}
 
 	/** Check if our nonce is set. */
-	if ( ! isset( $_POST['language_locale_meta_box_inner_nonce'] ) ) return $post_id;
-
-	$nonce = $_POST['language_locale_meta_box_inner_nonce'];
+	$nonce = filter_input(INPUT_POST, 'language_locale_meta_box_inner_nonce', FILTER_DEFAULT, FILTER_REQUIRE_SCALAR) ?? null;
+	if ( empty( $nonce ) ) return $post_id;
 
 	/** Verify that the nonce is valid. */
 	if ( ! wp_verify_nonce( $nonce, 'language_locale_meta_box_inner' ) ) return $post_id;
 
 	/** Check the user's permissions. */
-	if ( 'page' == $_POST['post_type'] ) {
+	$post_type = filter_input(INPUT_POST, 'post_type', FILTER_DEFAULT, FILTER_REQUIRE_SCALAR) ?? null;
+	if ( 'page' === $post_type ) {
 		if ( ! current_user_can( 'edit_page', $post_id ) ) return $post_id;
 	} else {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) return $post_id;
 	}
 
 	/** Sanitize the user input. */
-	$meta_box_fieldvalue = sanitize_text_field( $_POST['language_locale_overwrite'] );
-	foreach ( $_POST['alternate_lang_posts'] as $alternate_lang => $alternate_post_id ) {
-		if (!empty($alternate_post_id)) $alternate_lang_post_ids[$alternate_lang] = absint( $alternate_post_id );
+	$meta_box_fieldvalue = sanitize_text_field( filter_input(INPUT_POST, 'language_locale_overwrite', FILTER_SANITIZE_SPECIAL_CHARS) ?? null );
+	$alternate_lang_posts = filter_input(INPUT_POST, 'alternate_lang_posts', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY) ?? [];
+	$alternate_lang_post_ids = [];
+	foreach ( $alternate_lang_posts as $alternate_lang => $alternate_post_id ) {
+		if ( ! empty($alternate_post_id) ) $alternate_lang_post_ids[$alternate_lang] = absint( $alternate_post_id );
 	}
 
 	/** Add the meta field values to the database. */
-	update_post_meta( $post_id, 'language_locale_overwrite', $meta_box_fieldvalue );
-	update_post_meta( $post_id, 'alternate_lang_posts', $alternate_lang_post_ids );
+	if ( ! empty($meta_box_fieldvalue) )	update_post_meta( $post_id, 'language_locale_overwrite', $meta_box_fieldvalue );
+	if ( ! empty($alternate_lang_post_ids) ) update_post_meta( $post_id, 'alternate_lang_posts', $alternate_lang_post_ids );
 
 }
 
