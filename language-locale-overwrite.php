@@ -3,7 +3,7 @@
  * Plugin Name:			Language Locale Overwrite
  * Plugin URI:			https://github.com/Swiss-Mac-User/language-locale-overwrite
  * Description:			This plugin allows overwriting the general Language Locale and on individual pages.
- * Version:				2.2.0
+ * Version:				2.3.0
  * Requires at least:	6.2
  * Requires PHP:		7.4
  * Author:				Swiss-Mac-User
@@ -38,13 +38,24 @@ function disable_language_locale_overwrite_plugin() {
  */
 if ( is_admin() ) {
 	/** Apply hooks only if logged-in User in the Backend */
-	add_action( 'admin_init', 'language_locale_overwrite_admin_settings' );
-	add_action( 'add_meta_boxes', 'add_custom_meta_boxes' );
-	add_action( 'save_post', 'save_language_locale_overwrite' );
+	add_action( 'admin_init', 'language_locale_overwrite_admin_settings' ); // Enhance General Settings
+	add_action( 'add_meta_boxes', 'add_custom_meta_boxes' ); // Enhance Posts/Pages
+	add_action( 'save_post', 'save_language_locale_overwrite' ); // Posts/Pages Save/Edit Action
+	add_action( 'category_add_form_fields', 'language_locale_overwrite_taxonomy_form_new'); // Enhance Categories
+	add_action( 'post_tag_add_form_fields', 'language_locale_overwrite_taxonomy_form_new'); // Enhance Tags
+	add_action( 'category_edit_form_fields', 'language_locale_overwrite_taxonomy_form_edit'); // Enhance Categories
+	add_action( 'post_tag_edit_form_fields', 'language_locale_overwrite_taxonomy_form_edit'); // Enhance Tags
+	add_action( 'created_term', 'language_locale_overwrite_taxonomy_form_save' ); // Categories+Tags Create Action
+	add_action( 'edited_terms', 'language_locale_overwrite_taxonomy_form_save' ); // Categories+Tags Edit Action
 } else {
 	/** Apply hooks in the Frontend (all users / visitors) */
-	add_filter( 'language_attributes', 'set_custom_language_attributes' );
-	add_action( 'wp_head', 'add_alternate_hreflang_metatags', 5);
+	add_filter( 'language_attributes', 'set_custom_language_attributes' ); // <html lang>
+	add_action( 'wp_head', 'add_alternate_hreflang_metatags', 5); // <link rel="alternate" hreflang>
+	add_filter( 'the_title', 'markup_custom_language_content', 100 ); // Post/Page Title
+	add_filter( 'the_excerpt', 'markup_custom_language_content', 100 ); // Post/Page Excerpt
+	add_filter( 'the_content', 'markup_custom_language_content', 100 ); // Post/Page Content
+	add_filter( 'get_the_archive_title', 'markup_custom_language_taxonomy' ); // Archive Page Header
+	add_filter( 'get_the_archive_description', 'markup_custom_language_taxonomy' ); // Archive Page Header
 }
 
 /**
@@ -125,7 +136,6 @@ function language_locale_overwrite_admin_content_ogt(){
 	</p>
 <?php }
 
-
 /**
  * Map custom Meta Box Section to functions for Posts and Pages
  *
@@ -159,7 +169,7 @@ function show_language_locale_meta_box( $post ) {
 			<input type="text" class="rwmb-text" id="language_locale_overwrite" name="language_locale_overwrite" maxlength="5"
 			 value="<?php echo esc_attr( $custom_locale ); ?>">
 			<p id="language_locale_overwrite_placeholder" class="description">
-				<?php echo ($global_locale_changed !== false ? 'Global <a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" target="_blank">changed default</a>: <b>'.esc_attr($global_locale_changed).'</b> ' : '' ).'(WordPress default: '.get_bloginfo( 'language' ).')'; ?>
+				<?php echo ($global_locale_changed !== false ? 'Global <a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" title="'.__('Show WordPress Settings » General » Global Language Locale override', 'custom-language-locale').'" target="_blank">changed default</a>: <b>'.esc_attr($global_locale_changed).'</b> ' : '' ).'(WordPress default: '.get_bloginfo( 'language' ).')'; ?>
 			</p>
 		</div>
 	</div><?php
@@ -215,6 +225,7 @@ function show_language_locale_meta_box( $post ) {
  * @return array|bool The array of posts with language locale overwrite or false if no posts found.
  */
 function get_posts_with_language_locale_overwrite( $type, $locale ) {
+
 	switch ($type) {
 		case 'post':
 			$posts_array = get_posts([
@@ -240,6 +251,7 @@ function get_posts_with_language_locale_overwrite( $type, $locale ) {
 			$posts_array = false;
 	}
 	return $posts_array;
+
 }
 
 /**
@@ -289,7 +301,7 @@ function get_default_wp_language_locale(  ) {
  * @uses get_option('custom_global_language_html_lang')
  * @return string|bool The custom global language locale, or false if WP default.
  */
-function get_global_custom_language_locale( ) {
+function get_global_custom_language_locale(  ) {
 
 	$overwritten_global_locale = false;
 	$custom_locale = get_option('custom_global_language_html_lang');
@@ -344,10 +356,74 @@ function save_language_locale_overwrite( $post_id ) {
 	}
 
 	/** Add the meta field values to the database. */
-	if ( ! empty($meta_box_fieldvalue) )	update_post_meta( $post_id, 'language_locale_overwrite', $meta_box_fieldvalue );
+	if ( ! empty($meta_box_fieldvalue) ) update_post_meta( $post_id, 'language_locale_overwrite', $meta_box_fieldvalue );
 	if ( ! empty($alternate_lang_post_ids) ) update_post_meta( $post_id, 'alternate_lang_posts', $alternate_lang_post_ids );
 
 }
+
+/**
+ * Custom Language Locale field for new Taxonomies (Categories and Tags)
+ *
+ * @link https://rudrastyh.com/wordpress/add-custom-fields-to-taxonomy-terms.html
+ *
+ * @since 2.3.0
+ *
+ * @param object $taxonomy The new taxonomy term, param is filled by WordPress.
+ */
+function language_locale_overwrite_taxonomy_form_new( $taxonomy ) {
+
+	$global_language_locale = get_global_custom_language_locale(); ?>
+	<div class="form-field">
+		<label for="llo_cat"><?php _e( 'Change HTML lang attribute', 'custom-language-locale' ); ?></label>
+		<input type="text" name="language_locale_overwrite" id="llo_cat" maxlength="5">
+		<p class="description"><?php _e( 'Use custom lang-attribute for the taxonomy page.', 'custom-language-locale' ); echo ($global_language_locale !== false ? __(' Default: ', 'custom-language-locale').'<a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" title="'.__('Show WordPress Settings » General » Global Language Locale override', 'custom-language-locale').'" target="_blank">'.$global_language_locale.'</a>' : ''); ?></p>
+	</div>
+
+<?php }
+/**
+ * Edit field for custom Language Locale in existing Taxonomies.
+ * @link https://rudrastyh.com/wordpress/add-custom-fields-to-taxonomy-terms.html
+ * @since 2.3.0
+ *
+ * @param object $term The edited taxonomy term, param is filled by WordPress.
+ */
+function language_locale_overwrite_taxonomy_form_edit( $term ) {
+
+	$global_language_locale = get_global_custom_language_locale();
+	$language_locale = get_term_meta( $term->term_id, 'language_locale_overwrite', true ) ?? null; ?>
+	<tr class="form-field">
+		<th><label for="llo_cat"><?php _e( 'Change HTML lang attribute', 'custom-language-locale' ); ?></label></th>
+		<td>
+			<input type="text" name="language_locale_overwrite" id="llo_cat" maxlength="5"
+				value="<?php if (!empty($language_locale)) echo esc_attr( $language_locale ); ?>">
+			<p class="description"><?php _e( 'Use custom lang-attribute for the taxonomy page.', 'custom-language-locale' ); echo ($global_language_locale !== false ? __(' Default: ', 'custom-language-locale').'<a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" title="'.__('Show WordPress Settings » General » Global Language Locale override', 'custom-language-locale').'" target="_blank">'.$global_language_locale.'</a>' : ''); ?></p>
+		</td>
+	</tr>
+
+<?php }
+/**
+ * Save custom Language Locale field when adding/updating a Taxonomy Term.
+ * @link https://developer.wordpress.org/reference/hooks/edited_taxonomy/
+ * @since 2.3.0
+ *
+ * @param integer $term_id The ID of a modified term, param is filled by WordPress.
+ */
+function language_locale_overwrite_taxonomy_form_save( $term_id ) {
+
+	$allowed_taxonomies = [ 'category', 'post_tag' ];
+	$taxonomy_type = filter_input(INPUT_POST, 'taxonomy', FILTER_DEFAULT, FILTER_REQUIRE_SCALAR) ?? null;
+	$custom_language_locale = sanitize_text_field( filter_input(INPUT_POST, 'language_locale_overwrite', FILTER_SANITIZE_SPECIAL_CHARS) ?? null );
+	if ( in_array($taxonomy_type, $allowed_taxonomies) && !empty($custom_language_locale) ) {
+
+		update_term_meta( $term_id, 'language_locale_overwrite', sanitize_text_field( $_POST[ 'language_locale_overwrite' ] ) );
+
+	}
+
+}
+
+/** =========================================
+ * RENDERING PAGE OUTPUT
+ */
 
 /**
  * Modify get_bloginfo( 'language' ) to use 2-char ISO-Code.
@@ -401,6 +477,73 @@ function add_alternate_hreflang_metatags() {
 		<?php }
 		}
 	}
+
+}
+
+/**
+ * Attribute the_title(), the_excerpt(), and the_content() of Post title and summaries (on Archive pages)
+ *
+ * @since 2.3.0
+ *
+ * @uses get_global_custom_language_locale(), is_singular(), is_archive(), get_the_ID(), get_post_meta()
+ * @param string $content The content (title, excerpt, or body) to modify, param is filled by WordPress.
+ * @return string Modified $content
+ */
+function markup_custom_language_content( $content ) {
+
+	$modified_content = $content;
+	$global_locale = get_global_custom_language_locale();
+
+    if ( !is_singular() && is_archive() ) {
+
+		if ( !empty(get_the_ID()) ) {
+
+			$post_custom_locale = esc_attr( get_post_meta( get_the_ID(), 'language_locale_overwrite', true ) );
+			if ( !empty($post_custom_locale) && $global_locale !== false && $post_custom_locale !== $global_locale ) {
+
+				/** Prepends and appends the $content */
+				$modified_content = sprintf('<div lang="%s">%s</div>', $post_custom_locale, $content);
+
+			}
+		}
+
+    }
+    return $modified_content;
+
+}
+
+/**
+ * Attribute single_cat_title(), single_tag_title(), and the_archive_description() of Taxonomy pages
+ *
+ * @since 2.3.0
+ *
+ * @uses get_global_custom_language_locale(), is_category(), is_tag(), get_queried_object_id(), get_term_meta()
+ * @param string $content The content (title or description) to modify, param is filled by WordPress.
+ * @return string Modified $content
+ */
+function markup_custom_language_taxonomy( $content ) {
+
+	$modified_content = $content;
+	$global_locale = get_global_custom_language_locale();
+
+    if ( is_category() || is_tag() ) {
+
+		$taxonomy_id = get_queried_object_id();
+		$taxonomy_custom_locale = null;
+		if ( $taxonomy_id > 0 ) {
+
+			$taxonomy_custom_locale = esc_attr( get_term_meta( $taxonomy_id, 'language_locale_overwrite', true ) ) ?? null;
+			if ( !empty($taxonomy_custom_locale) && $global_locale !== false && $taxonomy_custom_locale !== $global_locale ) {
+
+				/** Prepends and appends the $content */
+				$modified_content = sprintf('<span lang="%s">%s</div>', $taxonomy_custom_locale, $content);
+
+			}
+
+		}
+
+    }
+    return $modified_content;
 
 }
 
