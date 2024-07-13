@@ -3,8 +3,8 @@
  * Plugin Name:			Language Locale Overwrite
  * Plugin URI:			https://github.com/Swiss-Mac-User/language-locale-overwrite
  * Description:			This plugin allows overwriting the general Language Locale and on individual pages.
- * Version:				2.3.0
- * Requires at least:	6.2
+ * Version:				2.4.0
+ * Requires at least:	6.5
  * Requires PHP:		7.4
  * Author:				Swiss-Mac-User
  * Author URI:			https://github.com/Swiss-Mac-User/
@@ -140,7 +140,6 @@ function language_locale_overwrite_admin_content_ogt(){
  * Map custom Meta Box Section to functions for Posts and Pages
  *
  * @link https://wordpress.stackexchange.com/questions/106859/add-metabox-to-all-custom-post-types See Feature Request #3
- * // TODO Add support for Custom Post Types: [#3](https://github.com/Swiss-Mac-User/language-locale-overwrite/issues/3)
  */
 function add_custom_meta_boxes() {
 	add_meta_box( 'language-locale-overwrite', __( 'Language Locale', 'language_locale_overwrite' ), 'show_language_locale_meta_box' );//, ['post', 'page'] );
@@ -216,41 +215,38 @@ function show_language_locale_meta_box( $post ) {
 /**
  * Get posts with language locale overwrite meta_key value.
  *
- * // TODO Add support for Custom Post Types: [#3](https://github.com/Swiss-Mac-User/language-locale-overwrite/issues/3)
- *
  * @link https://developer.wordpress.org/reference/functions/get_posts/
  * @link https://developer.wordpress.org/reference/functions/get_pages/
- * @param string $type The post type.
+ *
+ * @since 2.4.0 Added support for Custom Post Types fixing [#3](https://github.com/Swiss-Mac-User/language-locale-overwrite/issues/3)
+ *
+ * @param string $type The type to filter for relevant matches: 'post' (Posts) or 'page' (Pages).
  * @param string $locale The language locale.
- * @return array|bool The array of posts with language locale overwrite or false if no posts found.
+ * @return array|bool The array of matches with language locale overwrite - or false if no relevant results found.
  */
 function get_posts_with_language_locale_overwrite( $type, $locale ) {
 
-	switch ($type) {
-		case 'post':
-			$posts_array = get_posts([
-										'meta_key' => 'language_locale_overwrite'
-										,'meta_value' => $locale
-										,'posts_per_page' => -1 // All
-										,'orderby' => 'name'
-										,'order' => 'ASC'
-									]);
-			break;
+	$args = [
+			 'meta_key' => 'language_locale_overwrite'
+			,'meta_value' => $locale
+			,'posts_per_page' => -1 // All
+			,'orderby' => 'title'
+			,'order' => 'ASC'
+		];
 
-		case 'page':
-			$posts_array = get_pages([
-										'meta_key' => 'language_locale_overwrite'
-										,'meta_value' => $locale
-										,'number' => 0 // All
-										,'sort_column' => 'name'
-										,'sort_order' => 'ASC'
-									]);
-			break;
-
-		default:
-			$posts_array = false;
+	$relevant_matches = false;
+	if ($type === 'post') // For POSTS, including custom post types
+	{
+		$args['post_type'] = get_post_types(['public' => true], 'names');
+		$relevant_matches = get_posts($args) ?: false;
 	}
-	return $posts_array;
+	elseif ($type === 'page') // For PAGES and any custom page-like types
+	{
+		$args['post_type'] = array_merge(['page'], get_post_types(['public' => true, 'hierarchical' => true], 'names'));
+		$relevant_matches = get_posts($args) ?: false;
+	}
+
+	return $relevant_matches;
 
 }
 
