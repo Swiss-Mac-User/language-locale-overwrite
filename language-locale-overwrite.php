@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * Plugin Name:			Language Locale Overwrite
  * Plugin URI:			https://github.com/Swiss-Mac-User/language-locale-overwrite
  * Description:			This plugin allows overwriting the general Language Locale and on individual pages.
@@ -147,69 +147,67 @@ function add_custom_meta_boxes() {
 
 /**
  * Render Meta Box content.
- * @link https://metabox.io/how-to-create-custom-meta-boxes-custom-fields-in-wordpress/
  * @param WP_Post $post The post object.
  */
-function show_language_locale_meta_box( $post ) {
+function show_language_locale_meta_box($post) {
+    wp_nonce_field('language_locale_meta_box_inner', 'language_locale_meta_box_inner_nonce');
 
-	/** Get chached Views via get_post_meta from the database. */
-	wp_nonce_field( 'language_locale_meta_box_inner', 'language_locale_meta_box_inner_nonce' ); // Add an nonce field for save()
-	$global_locale_changed = get_global_custom_language_locale();
-	$custom_locale = get_post_meta( $post->ID, 'language_locale_overwrite', true );
-	$alternate_lang_post_ids = get_post_meta( $post->ID, 'alternate_lang_posts', true );
+    $global_locale_changed = get_global_custom_language_locale();
+    $custom_locale = get_post_meta($post->ID, 'language_locale_overwrite', true);
+    $alternate_lang_post_ids = get_post_meta($post->ID, 'alternate_lang_posts', true);
 
-	/** Display the meta box content. */
-	?>
-	<div id="llo" class="rwmb-field rwmb-text-wrapper">
-		<div class="rwmb-label">
-			<label for="language_locale_overwrite">Change Locale of this <?php echo ucfirst($post->post_type); ?></label>
-		</div>
-		<div class="rwmb-input">
-			<input type="text" class="rwmb-text" id="language_locale_overwrite" name="language_locale_overwrite" maxlength="5"
-			 value="<?php echo esc_attr( $custom_locale ); ?>">
-			<p id="language_locale_overwrite_placeholder" class="description">
-				<?php echo ($global_locale_changed !== false ? 'Global <a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" title="'.__('Show WordPress Settings » General » Global Language Locale override', 'custom-language-locale').'" target="_blank">changed default</a>: <b>'.esc_attr($global_locale_changed).'</b> ' : '' ).'(WordPress default: '.get_bloginfo( 'language' ).')'; ?>
-			</p>
-		</div>
-	</div><?php
-	$find_all_custom_locales_used = get_all_custom_language_locales();
-	if ( !empty($find_all_custom_locales_used) && is_array($find_all_custom_locales_used) )
-	{
-		foreach( $find_all_custom_locales_used as $other_custom_locale ) {
-			/** Ignore empty & current Post/Page's locale (no alternate hreflang needed) */
-			if (!empty($other_custom_locale) && $other_custom_locale != $custom_locale)
-			{
-				$find_alternate_posts = get_posts_with_language_locale_overwrite( $post->post_type, $other_custom_locale );
-				if ( !empty($find_alternate_posts) ) { ?>
-				<div id="ahl-<?php echo esc_attr($other_custom_locale); ?>" class="rwmb-field rwmb-text-wrapper">
-					<div class="rwmb-label">
-						<label for="alternate_lang_post_<?php echo esc_attr($other_custom_locale); ?>">
-							Link alternate lang <?php echo ucfirst($post->post_type) . ': ' . esc_attr($other_custom_locale); ?>
-						</label>
-					</div>
-					<div class="rwmb-input">
-						<select class="rwmb-select" id="alternate_lang_post_<?php echo esc_attr($other_custom_locale); ?>" name="alternate_lang_posts[<?php echo esc_attr($other_custom_locale); ?>]">
-							<option value="">--- None selected ---</option>
-							<?php
-							foreach ($find_alternate_posts as $alternate_post) {
-								$selected = ( isset($alternate_lang_post_ids[$other_custom_locale]) && ($alternate_post->ID === $alternate_lang_post_ids[$other_custom_locale]) ? 'selected' : '' );
-								printf('<option value="%d" %s>%s</option>',
-										esc_attr( $alternate_post->ID )
-										,$selected
-										,esc_html( $alternate_post->post_title )
-									);
-							}
-							?>
-						</select>
-						<p class="description">
-							Select <?php echo ucfirst($post->post_type); ?> with <i>similar Content</i> but in locale: <b><?php echo esc_attr($other_custom_locale); ?></b>
-						</p>
-					</div>
-				</div>
-			<?php }
-			}
-		}
-	}
+    ?>
+    <div id="llo" class="rwmb-field rwmb-text-wrapper">
+        <div class="rwmb-label">
+            <label for="language_locale_overwrite">Change Locale of this <?php echo ucfirst($post->post_type); ?></label>
+        </div>
+        <div class="rwmb-input">
+            <input type="text" class="rwmb-text" id="language_locale_overwrite" name="language_locale_overwrite" maxlength="5"
+             value="<?php echo esc_attr($custom_locale); ?>">
+            <p id="language_locale_overwrite_placeholder" class="description">
+                <?php echo ($global_locale_changed !== false ? 'Global <a href="'.get_admin_url(null, 'options-general.php#llo_global').'" title="'.__('Show WordPress Settings » General » Global Language Locale override', 'custom-language-locale').'" target="_blank">changed default</a>: <b>'.esc_attr($global_locale_changed).'</b> ' : '').'(WordPress default: '.get_bloginfo('language').')'; ?>
+            </p>
+        </div>
+    </div>
+    <?php
+    $all_custom_locales = get_all_custom_language_locales();
+
+    foreach ($all_custom_locales as $other_custom_locale) {
+        if (!empty($other_custom_locale) && $other_custom_locale != $custom_locale) {
+            $alternate_posts_pages = get_posts_pages_by_locale($other_custom_locale);
+
+            if (!empty($alternate_posts_pages)) {
+                ?>
+                <div id="ahl-<?php echo esc_attr($other_custom_locale); ?>" class="rwmb-field rwmb-text-wrapper">
+                    <div class="rwmb-label">
+                        <label for="alternate_lang_post_<?php echo esc_attr($other_custom_locale); ?>">
+                            Link alternate lang <?php echo ucfirst($post->post_type) . ': ' . esc_attr($other_custom_locale); ?>
+                        </label>
+                    </div>
+                    <div class="rwmb-input">
+                        <select class="rwmb-select" id="alternate_lang_post_<?php echo esc_attr($other_custom_locale); ?>" name="alternate_lang_posts[<?php echo esc_attr($other_custom_locale); ?>]">
+                            <option value="">--- None selected ---</option>
+                            <?php
+                            foreach ($alternate_posts_pages as $alternate_item) {
+                                $selected = (isset($alternate_lang_post_ids[$other_custom_locale]) && ($alternate_item->ID === $alternate_lang_post_ids[$other_custom_locale])) ? 'selected' : '';
+                                printf('<option value="%d" %s>%s (%s)</option>',
+                                    esc_attr($alternate_item->ID),
+                                    $selected,
+                                    esc_html($alternate_item->post_title),
+                                    esc_html($alternate_item->post_type)
+                                );
+                            }
+                            ?>
+                        </select>
+                        <p class="description">
+                            Select <?php echo ucfirst($post->post_type); ?> with <i>similar Content</i> but in locale: <b><?php echo esc_attr($other_custom_locale); ?></b>
+                        </p>
+                    </div>
+                </div>
+                <?php
+            }
+        }
+    }
 }
 
 /**
@@ -225,29 +223,28 @@ function show_language_locale_meta_box( $post ) {
  * @return array|bool The array of matches with language locale overwrite - or false if no relevant results found.
  */
 function get_posts_with_language_locale_overwrite( $type, $locale ) {
+    $args = [
+        'meta_key' => 'language_locale_overwrite',
+        'meta_value' => $locale,
+        'posts_per_page' => -1, // All
+        'orderby' => 'title',
+        'order' => 'ASC',
+        'post_type' => ['post', 'page'], // Include both posts and pages
+    ];
 
-	$args = [
-			 'meta_key' => 'language_locale_overwrite'
-			,'meta_value' => $locale
-			,'posts_per_page' => -1 // All
-			,'orderby' => 'title'
-			,'order' => 'ASC'
-		];
+    $relevant_matches = get_posts($args);
 
-	$relevant_matches = false;
-	if ($type === 'post') // For POSTS, including custom post types
-	{
-		$args['post_type'] = get_post_types(['public' => true], 'names');
-		$relevant_matches = get_posts($args) ?: false;
-	}
-	elseif ($type === 'page') // For PAGES and any custom page-like types
-	{
-		$args['post_type'] = array_merge(['page'], get_post_types(['public' => true, 'hierarchical' => true], 'names'));
-		$relevant_matches = get_posts($args) ?: false;
-	}
+    return !empty($relevant_matches) ? $relevant_matches : false;
+}
+function get_all_posts_pages_with_language_locale() {
+    $args = [
+        'meta_key' => 'language_locale_overwrite',
+        'meta_compare' => 'EXISTS',
+        'posts_per_page' => -1,
+        'post_type' => ['post', 'page'],
+    ];
 
-	return $relevant_matches;
-
+    return get_posts($args);
 }
 
 /**
@@ -259,25 +256,15 @@ function get_posts_with_language_locale_overwrite( $type, $locale ) {
  * @param bool $no_duplicates If true, filters out any duplicates. Default: true
  * @return array An array of language locales.
  */
-function get_all_custom_language_locales( $no_duplicates=true ) {
-
-	$defined_language_locales = array();
-	$list_of_custom_locales = array();
-	$query = new WP_Query([
-		 'meta_key' => 'language_locale_overwrite'
-		,'meta_compare' => 'EXISTS'
-		,'fields' => 'ids'
-	]);
-	if ( $query->have_posts() )
-	{
-		foreach( $query->posts as $post_id ) {
-			$defined_language_locales[] = get_post_meta( $post_id, 'language_locale_overwrite', true );
-		}
-		$list_of_custom_locales = ( $no_duplicates ? array_unique($defined_language_locales) : $defined_language_locales);
-		return $list_of_custom_locales;
-	}
-	return $list_of_custom_locales;
-
+function get_all_custom_language_locales() {
+    global $wpdb;
+    $locales = $wpdb->get_col(
+        "SELECT DISTINCT meta_value
+        FROM {$wpdb->postmeta}
+        WHERE meta_key = 'language_locale_overwrite'
+        AND meta_value != ''"
+    );
+    return array_unique($locales);
 }
 
 /**
@@ -289,6 +276,20 @@ function get_default_wp_language_locale(  ) {
 
 	return get_locale();
 
+}
+function get_posts_pages_by_locale($locale) {
+    $args = array(
+        'post_type' => array('post', 'page'),
+        'posts_per_page' => -1,
+        'meta_query' => array(
+            array(
+                'key' => 'language_locale_overwrite',
+                'value' => $locale,
+                'compare' => '='
+            )
+        )
+    );
+    return get_posts($args);
 }
 
 /**
@@ -392,7 +393,7 @@ function language_locale_overwrite_taxonomy_form_edit( $term ) {
 		<td>
 			<input type="text" name="language_locale_overwrite" id="llo_cat" maxlength="5"
 				value="<?php if (!empty($language_locale)) echo esc_attr( $language_locale ); ?>">
-			<p class="description"><?php _e( 'Use custom lang-attribute for the taxonomy page.', 'custom-language-locale' ); echo ($global_language_locale !== false ? __(' Default: ', 'custom-language-locale').'<a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" title="'.__('Show WordPress Settings » General » Global Language Locale override', 'custom-language-locale').'" target="_blank">'.$global_language_locale.'</a>' : ''); ?></p>
+			<p class="description"><?php _e( 'Use custom lang-attribute for the taxonomy page.', 'custom-language-locale' ); echo ($global_language_locale !== false ? __(' Default: ', 'custom-language-locale').'<a href="'.get_admin_url( null, 'options-general.php#llo_global' ).'" title="'.__('Show WordPress Settings » General  Global Language Locale override', 'custom-language-locale').'" target="_blank">'.$global_language_locale.'</a>' : ''); ?></p>
 		</td>
 	</tr>
 
@@ -424,7 +425,7 @@ function language_locale_overwrite_taxonomy_form_save( $term_id ) {
 /**
  * Modify get_bloginfo( 'language' ) to use 2-char ISO-Code.
  *
- * @link https://wordpress.stackexchange.com/a/210101/110615
+ * @link https://wordpress.stackexchange.com/a/210101/210615
  * @uses get_global_custom_language_locale()
  */
 function set_custom_language_attributes( $wp_default_lang )
@@ -548,7 +549,7 @@ function markup_custom_language_taxonomy( $content ) {
  */
 
  /**
- * Plugin dependency: OG — Better Share on Social Media
+ * Plugin dependency: OG  Better Share on Social Media
  *
  * User custom locale (language code) properly as "og:local" tag.
  * @link https://wordpress.org/plugins/og/
